@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Arslan Bütçe Pro V8</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary: #7030a0;
@@ -15,15 +16,13 @@
 
         body { font-family: 'Segoe UI', Roboto, sans-serif; margin: 0; background: var(--bg); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* Gelişmiş Header & Logo */
         header { background: white; padding: 10px 15px; border-bottom: 3px solid var(--primary); flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .app-logo { height: 85px; width: auto; } /* Logonun boyutu telefona göre ayarlandı */
+        .app-logo { height: 60px; width: auto; }
         header h1 { color: var(--primary); margin: 0; font-size: 1.1rem; text-transform: uppercase; font-weight: 900; letter-spacing: 1px; }
 
-        /* Navigasyon */
         .nav { display: flex; background: var(--primary); flex-shrink: 0; height: 65px; box-shadow: 0 -2px 10px rgba(0,0,0,0.1); z-index: 10; }
-        .nav-item { flex: 1; color: white; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; font-size: 0.8rem; opacity: 0.7; transition: 0.3s; }
-        .nav-item.active { background: var(--secondary); color: black; opacity: 1; font-size: 0.85rem; }
+        .nav-item { flex: 1; color: white; text-align: center; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; font-size: 0.75rem; opacity: 0.7; transition: 0.3s; padding: 0 5px; }
+        .nav-item.active { background: var(--secondary); color: black; opacity: 1; }
 
         main { flex: 1; overflow-y: auto; padding: 15px; padding-bottom: 60px; }
         .section { display: none; animation: fadeIn 0.4s ease; }
@@ -32,46 +31,40 @@
 
         /* Özet Kutuları */
         .summary-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 15px; }
-        .stat-card { padding: 15px; border-radius: 12px; color: white; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); position: relative; }
+        .stat-card { padding: 15px; border-radius: 12px; color: white; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .bg-gain { background: linear-gradient(135deg, #2e7d32, #4caf50); }
         .bg-debt { background: linear-gradient(135deg, #c00000, #ff4d4d); }
         .bg-remain { background: linear-gradient(135deg, #7030a0, #9b59b6); border-top: 4px solid var(--secondary); }
-        .stat-card span { font-size: 0.75rem; font-weight: bold; text-transform: uppercase; opacity: 0.9; }
         .stat-card b { font-size: 1.3rem; }
 
-        /* Ay Kartları */
-        .month-card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 20px; border-top: 5px solid var(--secondary); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .month-title { color: var(--primary); font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; font-size: 0.95rem; }
+        /* Tablo Stili */
+        .report-table { width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden; margin-top: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .report-table th { background: #eee; padding: 12px; text-align: left; font-size: 0.8rem; }
+        .report-table td { padding: 12px; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
+        .report-table tr:last-child { font-weight: bold; background: #f9f9f9; }
 
-        /* Liste Öğeleri */
+        .chart-container { background: white; padding: 15px; border-radius: 15px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+
+        /* Mevcut Liste Stilleri */
+        .month-card { background: white; border-radius: 15px; padding: 15px; margin-bottom: 20px; border-top: 5px solid var(--secondary); box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .month-title { color: var(--primary); font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; }
         .item-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f9f9f9; gap: 12px; }
-        .check-btn { width: 20px; height: 20px; border-radius: 4px; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-size: 14px; color: transparent; transition: 0.2s; }
+        .check-btn { width: 20px; height: 20px; border-radius: 4px; border: 2px solid #ddd; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
         .check-btn.checked { background: var(--income-color); border-color: var(--income-color); color: white; }
         .item-content { flex: 1; }
-        .item-content b { display: block; font-size: 0.9rem; color: #333; }
-        .item-content small { font-size: 0.75rem; color: #888; }
-        .item-price { text-align: right; font-weight: bold; font-size: 0.95rem; }
+        .item-price { text-align: right; font-weight: bold; }
         .price-inc { color: var(--income-color); }
         .price-exp { color: var(--expense-color); }
         .done-text { text-decoration: line-through; opacity: 0.5; }
 
-        /* Form Stili */
-        .form-card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); border-top: 5px solid var(--primary); }
+        /* Form */
+        .form-card { background: white; border-radius: 15px; padding: 20px; border-top: 5px solid var(--primary); }
         .field { margin-bottom: 15px; }
-        label { display: block; font-size: 0.85rem; font-weight: bold; margin-bottom: 5px; color: #555; }
-        input, select { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; font-size: 1rem; }
-        input:focus, select:focus { border-color: var(--primary); outline: none; }
-        .btn-submit { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 12px; font-weight: bold; font-size: 1rem; cursor: pointer; margin-top: 10px; }
+        input, select { width: 100%; padding: 12px; border: 2px solid #eee; border-radius: 10px; box-sizing: border-box; }
+        .btn-submit { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 12px; font-weight: bold; cursor: pointer; }
 
-        /* Bilgi Modalı (Hakkında) */
-        .info-icon { font-size: 1.2rem; color: var(--primary); cursor: pointer; margin-left: auto; display: block; width: max-content; margin-top: -10px; margin-bottom: 10px;}
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(3px); }
-        .modal-content { background-color: white; margin: 15% auto; padding: 20px; border-radius: 15px; width: 85%; max-width: 300px; box-shadow: 0 5px 30px rgba(0,0,0,0.3); animation: slideIn 0.3s ease; }
-        @keyframes slideIn { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .modal-content h3 { color: var(--primary); margin-top: 0; text-align: center; }
-        .modal-content p { font-size: 0.85rem; color: #555; line-height: 1.6; }
-        .close-modal { color: #aaa; float: right; font-size: 25px; font-weight: bold; cursor: pointer; margin-top: -15px; }
-        .about-logo { display: block; margin: 0 auto 15px auto; height: 40px; width: auto; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); }
+        .modal-content { background-color: white; margin: 15% auto; padding: 20px; border-radius: 15px; width: 85%; max-width: 300px; }
     </style>
 </head>
 <body>
@@ -83,25 +76,33 @@
 
 <main>
     <div id="view-home" class="section active">
-        <span class="info-icon" onclick="openAbout()">ℹ️</span>
-
+        <span onclick="openAbout()" style="cursor:pointer; float:right;">ℹ️ Bilgi</span>
+        <div style="clear:both"></div>
         <div class="summary-grid">
-            <div class="stat-card bg-gain">
-                <span>Yıllık Beklenen Kazanç</span>
-                <b id="total-gain">0 TL</b>
-            </div>
-            <div class="stat-card bg-debt">
-                <span>Ödenmeyen Toplam Borç</span>
-                <b id="total-debt">0 TL</b>
-            </div>
-            <div class="stat-card bg-remain">
-                <span>Cepteki Net Para</span>
-                <b id="total-remain">0 TL</b>
-            </div>
+            <div class="stat-card bg-gain"><span>Beklenen Kazanç</span> <b id="total-gain">0 TL</b></div>
+            <div class="stat-card bg-debt"><span>Ödenmeyen Borç</span> <b id="total-debt">0 TL</b></div>
+            <div class="stat-card bg-remain"><span>Cepteki Net Para</span> <b id="total-remain">0 TL</b></div>
         </div>
-        
-        <div id="month-lists-container">
-            </div>
+        <div id="month-lists-container"></div>
+    </div>
+
+    <div id="view-report" class="section">
+        <div class="chart-container">
+            <canvas id="myChart"></canvas>
+        </div>
+        <h3 style="color:var(--primary);">Genel Özet Tablo</h3>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Kategori</th>
+                    <th>Gelir</th>
+                    <th>Gider</th>
+                    <th>Fark</th>
+                </tr>
+            </thead>
+            <tbody id="report-body">
+                </tbody>
+        </table>
     </div>
 
     <div id="view-add" class="section">
@@ -137,39 +138,31 @@
 </main>
 
 <div class="nav">
-    <div class="nav-item active" onclick="changeTab('view-home', this)">BAKİYE & LİSTE</div>
+    <div class="nav-item active" onclick="changeTab('view-home', this)">LİSTE</div>
+    <div class="nav-item" onclick="changeTab('view-report', this)">ÖZET RAPOR</div>
     <div class="nav-item" onclick="changeTab('view-add', this)">VERİ EKLE</div>
 </div>
 
 <div id="aboutModal" class="modal">
     <div class="modal-content">
-        <span class="close-modal" onclick="closeAbout()">&times;</span>
-        <img src="https://i.ibb.co/Ng1BbC34/file-00000000394872439375884d728987a2-2.png" alt="Arslan Logo" class="about-logo">
-        <h3>Aile Bütçe Pro Asistan</h3>
-        <p>
-           aileler için özel olarak geliştirilen bu gelişmiş mobil asistan, 
-            kişisel ve ailevi finansal süreçleri tek bir noktadan yönetmenizi sağlar.
-        </p>
-        <p>
-            <b>Temel Özellikler:</b><br>
-            • Veri Ekleme & Düzenle<br>
-            • Aylık Otomatik Gruplama<br>
-            • Ödeme Kontrolü (Tik Atma)<br>
-            • Anlık Borç/Bakiye Hesaplama
-        </p>
-        <p style="font-size:0.75rem; color:#888; text-align:center;">Verileriniz telefon hafızasında (LocalStorage) saklanır.</p>
+        <span onclick="closeAbout()" style="float:right; cursor:pointer; font-size:20px;">&times;</span>
+        <h3>Bütçe Pro V8</h3>
+        <p>Finansal durumunuzu anlık takip edin.</p>
     </div>
 </div>
 
 <script>
     let myData = JSON.parse(localStorage.getItem('arslan_v8_db')) || [];
+    let myChart = null;
 
     function changeTab(id, el) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
         document.getElementById(id).classList.add('active');
         el.classList.add('active');
+        
         if(id === 'view-home') renderHome();
+        if(id === 'view-report') renderReport();
         if(id === 'view-add' && !document.getElementById('edit-id').value) clearForm();
     }
 
@@ -203,11 +196,9 @@
     function renderHome() {
         const listContainer = document.getElementById('month-lists-container');
         listContainer.innerHTML = '';
-        
         let tGain = 0, tDebt = 0, tRemain = 0;
 
         myData.sort((a, b) => new Date(a.date) - new Date(b.date));
-
         const grouped = myData.reduce((acc, item) => {
             const mLabel = new Date(item.date).toLocaleString('tr-TR', { month: 'long', year: 'numeric' });
             if (!acc[mLabel]) acc[mLabel] = [];
@@ -217,22 +208,15 @@
 
         for (const month in grouped) {
             let monthCard = `<div class="month-card"><div class="month-title">${month}</div>`;
-            
             grouped[month].forEach(item => {
                 const isInc = item.type === 'gelir';
                 const isChecked = item.status === true;
-                
-                if(isInc) {
-                    tGain += item.amount;
-                    if(isChecked) tRemain += item.amount;
-                } else {
-                    if(isChecked) tRemain -= item.amount;
-                    else tDebt += item.amount;
-                }
+                if(isInc) { tGain += item.amount; if(isChecked) tRemain += item.amount; }
+                else { if(isChecked) tRemain -= item.amount; else tDebt += item.amount; }
 
                 monthCard += `
                     <div class="item-row">
-                        <div class="check-btn ${isChecked ? 'checked' : ''}" onclick="toggleStatus('${item.id}')">✓</div>
+                        <div class="check-btn ${isChecked ? 'checked' : ''}" onclick="toggleStatus('${item.id}')">${isChecked ? '✓' : ''}</div>
                         <div class="item-content ${isChecked ? 'done-text' : ''}" onclick="editEntry('${item.id}')">
                             <b>${item.name}</b>
                             <small>${new Date(item.date).toLocaleDateString('tr-TR')}</small>
@@ -240,16 +224,71 @@
                         <div class="item-price ${isInc ? 'price-inc' : 'price-exp'}">
                             ${isInc ? '+' : '-'}${item.amount.toLocaleString('tr-TR')} TL
                         </div>
-                    </div>
-                `;
+                    </div>`;
             });
             monthCard += `</div>`;
             listContainer.innerHTML += monthCard;
         }
-
         document.getElementById('total-gain').innerText = tGain.toLocaleString('tr-TR') + ' TL';
         document.getElementById('total-debt').innerText = tDebt.toLocaleString('tr-TR') + ' TL';
         document.getElementById('total-remain').innerText = tRemain.toLocaleString('tr-TR') + ' TL';
+    }
+
+    function renderReport() {
+        const tbody = document.getElementById('report-body');
+        tbody.innerHTML = '';
+        
+        let totalG = 0, totalE = 0;
+        const reportData = myData.reduce((acc, item) => {
+            const mLabel = new Date(item.date).toLocaleString('tr-TR', { month: 'long', year: 'numeric' });
+            if (!acc[mLabel]) acc[mLabel] = { g: 0, e: 0 };
+            if (item.type === 'gelir') acc[mLabel].g += item.amount;
+            else acc[mLabel].e += item.amount;
+            return acc;
+        }, {});
+
+        const labels = Object.keys(reportData);
+        const incomeData = [];
+        const expenseData = [];
+
+        labels.forEach(month => {
+            const g = reportData[month].g;
+            const e = reportData[month].e;
+            totalG += g; totalE += e;
+            incomeData.push(g);
+            expenseData.push(e);
+
+            tbody.innerHTML += `
+                <tr>
+                    <td>${month}</td>
+                    <td style="color:green">+${g.toLocaleString()}</td>
+                    <td style="color:red">-${e.toLocaleString()}</td>
+                    <td>${(g - e).toLocaleString()} TL</td>
+                </tr>`;
+        });
+
+        tbody.innerHTML += `
+            <tr>
+                <td>GENEL TOPLAM</td>
+                <td style="color:green">+${totalG.toLocaleString()}</td>
+                <td style="color:red">-${totalE.toLocaleString()}</td>
+                <td style="background:var(--secondary)">${(totalG - totalE).toLocaleString()} TL</td>
+            </tr>`;
+
+        // Grafiği Çiz
+        if(myChart) myChart.destroy();
+        const ctx = document.getElementById('myChart').getContext('2d');
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Gelir', data: incomeData, backgroundColor: '#2e7d32' },
+                    { label: 'Gider', data: expenseData, backgroundColor: '#c00000' }
+                ]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'top' } } }
+        });
     }
 
     function toggleStatus(id) {
@@ -266,7 +305,7 @@
         document.getElementById('in-name').value = item.name;
         document.getElementById('in-type').value = item.type;
         document.getElementById('in-amount').value = item.amount;
-        changeTab('view-add', document.querySelectorAll('.nav-item')[1]);
+        changeTab('view-add', document.querySelectorAll('.nav-item')[2]);
     }
 
     function clearForm() {
@@ -276,13 +315,11 @@
         document.getElementById('in-amount').value = '';
     }
 
-    // Modal Fonksiyonları
     function openAbout() { document.getElementById('aboutModal').style.display = "block"; }
     function closeAbout() { document.getElementById('aboutModal').style.display = "none"; }
-    window.onclick = function(event) { if (event.target == document.getElementById('aboutModal')) { closeAbout(); } }
-
+    
     function resetAllData() {
-        if(confirm("Tüm bütçe verileri silinecek. Emin misiniz?")) {
+        if(confirm("Tüm veriler silinecek?")) {
             localStorage.removeItem('arslan_v8_db');
             myData = [];
             renderHome();
