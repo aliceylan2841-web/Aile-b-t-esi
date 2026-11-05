@@ -6,9 +6,12 @@
 <meta name="theme-color" content="#5b21b6">
 <meta name="description" content="Aile Bütçesi: gelir, gider ve borçlarınızı aylık takip edin. Veriler sadece cihazınızda tutulur, internet gerekmez.">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Aile Bütçesi">
 <title>Aile Bütçesi</title>
 <style>
@@ -383,7 +386,7 @@ function openSettings(){tab('settings',document.querySelectorAll('.nav-item')[4]
 function closeModal(){document.getElementById('modal').classList.remove('open')}
 function init(){document.getElementById('date').value=ymd(new Date());updateCats();renderHome();renderSettings();window.addEventListener('storage',()=>{data=JSON.parse(localStorage.getItem(DB)||'[]');debts=JSON.parse(localStorage.getItem(DEBTS)||'[]');renderHome()})}
 init();
-if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>navigator.serviceWorker.register('sw.js',{scope:'./'}).catch(()=>{}))}
 </script>
 </body>
 </html>
