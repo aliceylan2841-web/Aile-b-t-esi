@@ -114,6 +114,19 @@ input:focus,select:focus{border-color:var(--primary2);box-shadow:0 0 0 3px rgba(
 .month-net-sub em{font-style:normal;font-size:10px;font-weight:800}
 .group-sub{display:flex;justify-content:space-between;font-size:10px;font-weight:900;padding:5px 0;border-bottom:1px solid var(--line);color:var(--muted)}
 .group-sub .in{color:var(--green)}.group-sub .paid{color:var(--red)}
+
+.q-title{font-size:10px;font-weight:900;margin:10px 0 6px;display:flex;justify-content:space-between;align-items:center}
+.q-title button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 8px;font-size:9px;font-weight:800;color:var(--primary)}
+.q-wrap{display:flex;flex-wrap:wrap;gap:6px}
+.qchip{border:1.5px solid var(--line);background:#fff;border-radius:11px;padding:9px 12px;font-size:11px;font-weight:800;color:var(--text)}
+.qchip.on.gelir{background:var(--green);border-color:var(--green);color:#fff}
+.qchip.on.gider{background:var(--red);border-color:var(--red);color:#fff}
+.q-actions{display:flex;gap:7px;margin-top:12px}.q-actions .secondary{flex:none}.q-actions .primary:disabled{opacity:.45}
+.pk-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.pk-row .nm{flex:1;min-width:0;font-size:12px;font-weight:800}
+.pk-row .nm small{display:block;font-size:9px;font-weight:800;margin-top:2px}
+.pk-row input{width:120px;text-align:right;font-weight:900}
+.pk-total{display:flex;justify-content:space-between;font-size:11px;font-weight:900;padding:10px 0}
 </style>
 </head>
 <body>
@@ -171,7 +184,7 @@ input:focus,select:focus{border-color:var(--primary2);box-shadow:0 0 0 3px rgba(
   <div class="field"><label>TUTAR (TL)</label><input type="number" id="amount" inputmode="decimal" placeholder="0,00"></div>
   <button class="primary" onclick="saveEntry()">KAYDET</button>
  </div>
- <div class="card panel"><h3>⚡ Hızlı Kategoriler</h3><div id="quickCats"></div></div>
+ <div class="card panel"><h3>⚡ Toplu Ekle <span>Ayarlardaki kategorilerden birden fazla seç</span></h3><div id="quickCats"></div></div>
 </section>
 
 <section id="debts" class="section">
@@ -372,9 +385,39 @@ function addDebt(){let p=document.getElementById('debtPerson').value.trim().toUp
 function renderDebts(){let c=document.getElementById('debtList');if(!debts.length){c.innerHTML='<div class="card empty">Henüz borç kaydı yok.</div>';return}c.innerHTML=debts.map(d=>{let rem=Math.max(0,d.total-d.paid),pct=d.total?Math.min(100,Math.round(d.paid/d.total*100)):0;return `<div class="card debt"><div class="debt-top"><span>${esc(d.person)}</span><span class="${rem?'danger':'success'}">${rem?money(rem):'TAMAMLANDI'}</span></div><div class="debt-meta">Toplam: ${d.total} ${esc(d.unit)} · Ödenen: ${d.paid} ${esc(d.unit)}</div><div class="progress"><i style="width:${pct}%"></i></div><div style="display:flex;gap:6px;margin-top:9px"><button class="secondary" style="flex:1" onclick="payDebt('${d.id}')">Ödeme Yap</button><button class="secondary danger" onclick="delDebt('${d.id}')">Sil</button></div></div>`}).join('')}
 function payDebt(id){let d=debts.find(x=>x.id==id);let q=prompt(d.person+' için ödeme miktarı ('+d.unit+')');if(q!==null&&Number.isFinite(parseFloat(q))&&parseFloat(q)>0){d.paid=Math.min(d.total,d.paid+parseFloat(q));save();renderDebts();toast('Ödeme işlendi')}}
 function delDebt(id){if(confirm('Borç silinsin mi?')){debts=debts.filter(x=>x.id!=id);save();renderDebts()}}
-function renderSettings(){let g=cats.map((c,i)=>`<div class="setting-row"><span>${esc(c.name)}<small>${c.type==='gelir'?'Gelir':'Gider'}</small></span><button class="small-btn danger" onclick="removeCat(${i})">×</button></div>`).join('');document.getElementById('catList').innerHTML=g||'<div class="empty">Kategori yok</div>';document.getElementById('quickCats').innerHTML=cats.slice(0,8).map(c=>`<button class="secondary" style="margin:3px" onclick="quick('${esc(c.name)}','${c.type}')">${esc(c.name)}</button>`).join('')}
+function renderSettings(){let g=cats.map((c,i)=>`<div class="setting-row"><span>${esc(c.name)}<small>${c.type==='gelir'?'Gelir':'Gider'}</small></span><button class="small-btn danger" onclick="removeCat(${i})">×</button></div>`).join('');document.getElementById('catList').innerHTML=g||'<div class="empty">Kategori yok</div>';renderQuick()}
 function addCategory(){let n=document.getElementById('catName').value.trim().toUpperCase(),t=document.getElementById('catType').value;if(!n)return toast('Kategori adı girin');if(!cats.some(c=>c.name===n))cats.push({name:n,type:t});save();document.getElementById('catName').value='';renderSettings();updateCats();toast('Kategori eklendi')}
 function removeCat(i){if(confirm(cats[i].name+' kategorisi silinsin mi?')){cats.splice(i,1);save();renderSettings();updateCats()}}
+let pick=new Set();
+const ck=c=>c.type+'|'+c.name;
+function renderQuick(){
+ let el=document.getElementById('quickCats');if(!el)return;
+ pick=new Set([...pick].filter(k=>cats.some(c=>ck(c)===k)));
+ let mk=t=>{let l=cats.filter(c=>c.type===t);if(!l.length)return '';
+  return `<div class="q-title ${t==='gelir'?'success':'danger'}"><span>${t==='gelir'?'💰 GELİR':'💸 GİDER'}</span><button onclick="pickType('${t}')">☑ Tümünü seç</button></div><div class="q-wrap">`+
+  l.map(c=>`<button class="qchip ${t} ${pick.has(ck(c))?'on':''}" data-k="${esc(ck(c))}" onclick="pickCat(this.dataset.k)">${pick.has(ck(c))?'✓ ':''}${esc(c.name)}</button>`).join('')+'</div>'};
+ let body=mk('gelir')+mk('gider');
+ if(!body){el.innerHTML='<div class="empty">Önce Ayarlar\'dan kategori ekleyin.</div>';return}
+ el.innerHTML=body+`<div class="q-actions"><button class="secondary" onclick="pick.clear();renderQuick()">Temizle</button><button class="primary" ${pick.size?'':'disabled'} onclick="openPick()">Seçilenleri ekle (${pick.size})</button></div>`}
+function pickCat(k){pick.has(k)?pick.delete(k):pick.add(k);renderQuick()}
+function pickType(t){let l=cats.filter(c=>c.type===t),all=l.every(c=>pick.has(ck(c)));l.forEach(c=>all?pick.delete(ck(c)):pick.add(ck(c)));renderQuick()}
+function pickedCats(){return cats.filter(c=>pick.has(ck(c)))}
+function lastAmount(c){let l=data.filter(x=>x.name===c.name&&x.type===c.type).sort((a,b)=>b.date.localeCompare(a.date))[0];return l?l.amount:''}
+function openPick(){
+ let l=pickedCats();if(!l.length)return;
+ document.getElementById('modalTitle').textContent='Toplu Ekle ('+l.length+' kategori)';
+ document.getElementById('modalBody').innerHTML=`<div class="field"><label>TARİH</label><input type="date" id="pkDate" value="${ymd(new Date())}"></div>
+ <div id="pkRows">${l.map((c,i)=>`<div class="pk-row"><div class="nm">${esc(c.name)}<small class="${c.type==='gelir'?'success':'danger'}">${c.type==='gelir'?'💰 Gelir':'💸 Gider'}</small></div><input type="number" inputmode="decimal" id="pk${i}" placeholder="0,00" value="${lastAmount(c)}" oninput="pkTotal()"></div>`).join('')}</div>
+ <div class="pk-total"><span class="success" id="pkIn"></span><span class="danger" id="pkOut"></span></div>
+ <button class="primary" onclick="savePick()">HEPSİNİ KAYDET</button>`;
+ document.getElementById('modal').classList.add('open');pkTotal()}
+function pkTotal(){let i=0,o=0;pickedCats().forEach((c,n)=>{let v=parseFloat(document.getElementById('pk'+n).value)||0;c.type==='gelir'?i+=v:o+=v});document.getElementById('pkIn').textContent='Gelir: '+money(i);document.getElementById('pkOut').textContent='Gider: '+money(o)}
+function savePick(){
+ let d=document.getElementById('pkDate').value;if(!d)return toast('Tarih seçin');
+ let added=0;
+ pickedCats().forEach((c,n)=>{let a=parseFloat(document.getElementById('pk'+n).value);if(Number.isFinite(a)&&a>0){data.push({id:newId(),date:d,name:c.name,type:c.type,amount:a,status:false});added++}});
+ if(!added)return toast('En az bir tutar girin');
+ pick.clear();save();closeModal();renderQuick();toast(added+' kayıt eklendi');tab('home',document.querySelector('.nav-item'))}
 function quick(n,t){document.getElementById('name').value=n;document.getElementById('type').value=t;toast('Kategori seçildi')}
 function updateCats(){document.getElementById('cats').innerHTML=cats.map(c=>`<option value="${esc(c.name)}">`).join('')}
 function exportBackup(){let blob=new Blob([JSON.stringify({version:2,data,debts,cats},null,2)],{type:'application/json'});download(blob,'aile-butcesi-yedek-'+ymd(new Date())+'.json')}
